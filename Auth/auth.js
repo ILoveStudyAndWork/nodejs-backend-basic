@@ -43,14 +43,15 @@ exports.login = async (req, res, next) => {
         error: "User not found",
       })
     } else {
-      bcrypt.compare(password, user.password).then(function (result) {
-        result 
-        ? res.status(200).json({
-          message: "Login successful",
-          user,
+      bcrypt.compare(password, user.password)
+        .then(function (result) {
+          result
+            ? res.status(200).json({
+              message: "Login successful",
+              user,
+            })
+            : res.status(400).json({ message: "Login not successful" })
         })
-        : res.status(400).json({message: "Login not successful"})
-      })
     }
   } catch (error) {
     res.status(400).json({
@@ -60,43 +61,41 @@ exports.login = async (req, res, next) => {
   }
 }
 
-// refactor, nested too much
+
 exports.update = async (req, res, next) => {
   const { role, id } = req.body;
-  if (role && id) {
-    if (role === "admin") {
-      await User.findById(id)
-        .then((user) => {
-          if (user.role != "admin") {
-            user.role = role;
-            user.save()
-              .then((user) => res.status(201).json({ message: "Update successful", user }))
-              .catch((err) => {
-                if (err) {
-                  res
-                    .status("400")
-                    .json({ message: "An error occurred", error: err.message });
-                  process.exit(1);
-                }
-              });
-          } else {
-            res.status(400).json({ mesage: "User is already an Admni" });
-          }
-        })
-        .catch((error) => {
-          res
-            .status(400)
-            .json({ message: "An error occurred", error: error.message })
-        });
-    } else {
-      res.status(400).json({
-        message: "Role is not admin"
-      })
-    }
-  } else {
+  if (!(id && role)) {
     res.status(400).json({ message: "Role or Id is not present" })
   }
 
+  if (role !== "admin") {
+    res.status(400).json({
+      message: "Role is not admin"
+    })
+  }
+
+  await User.findById(id)
+    .then((user) => {
+      if (user.role === "admin") {
+        res.status(400).json({ mesage: "User is already an Admni" });
+        process.exit(1);
+      }
+      user.role = role;
+      user.save()
+        .then((user) => res.status(201).json({ message: "Update successful", user }))
+        .catch((err) => {
+          if (err) {
+            res
+              .status("400")
+              .json({ message: "An error occurred", error: err.message });
+          }
+        });
+    })
+    .catch((error) => {
+      res
+        .status(400)
+        .json({ message: "An error occurred", error: error.message })
+    });
 }
 
 exports.deleteUser = async (req, res, next) => {
